@@ -213,4 +213,30 @@ class Transformer(nn.Module):
     def project(self, x):
         return self.projection_layer(x)
     
-def build_transformer(src_)
+def build_transformer(src_vocab_size, tgt_vocab_size, src_seq_len, tgt_seq_len, d_model = 512, N = 6, h = 8, dropout = 0.1, d_ff = 2048):
+    # Create the embedding layer
+    src_embed = InputEmbeddings(d_model, src_vocab_size)
+    tgt_embed = InputEmbeddings(d_model, tgt_vocab_size)
+    # Create the positional encoding layer
+    src_pos = PositionalEncoding(d_model, src_seq_len, dropout)
+    tgt_pos = PositionalEncoding(d_model, tgt_seq_len, dropout)
+    # Create the encoder and decoder blocks
+    encoder_blocks = []
+    decoder_blocks = []
+    for i in range(N):
+        encoder_blocks.append(EncoderBlock(MultiHeadAttentionBlock(d_model, h, dropout), FeedForwardBlock(d_model, d_ff, dropout), dropout))
+        decoder_blocks.append(DecoderBlock(MultiHeadAttentionBlock(d_model, h, dropout), MultiHeadAttentionBlock(d_model, h, dropout), FeedForwardBlock(d_model, d_ff, dropout), dropout))
+
+    # Create the encoder and decoder
+    encoder = Encoder(encoder_blocks)
+    decoder = Decoder(decoder_blocks)
+    # Create the projection layer
+    projection_layer = ProjectionLayer(d_model, tgt_vocab_size)
+    # Create the transformer
+    transformer = Transformer(encoder, decoder, src_embed, tgt_embed, src_pos, tgt_pos, projection_layer)
+
+    # Xavier initialization
+    for p in transformer.parameters():
+        if p.dim() > 1:
+            nn.init.xavier_uniform_(p)
+    return transformer
